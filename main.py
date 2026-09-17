@@ -50,7 +50,7 @@ st.plotly_chart(fig1, use_container_width=True)
 
 # 구분 구역 및 첫 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 주요 개봉작 중 특정 장르(예: 드라마, 애니메이션 등)가 차지하는 비중과 다양성을 한눈에 비교할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 특정 장르가 차지하는 비중을 직관적으로 보여준다. 하지만 얼마나 많은 관객이 봤는지는 알기 힘들다.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
