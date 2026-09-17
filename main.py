@@ -13,10 +13,15 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
     
-    # genre 열이 존재하는 경우, 첫 번째 장르만 추출 (세로막대 기호 '|' 기준)
+    # genre 열 전처리 (첫 번째 장르만 추출 및 결측치 처리)
     if 'genre' in df.columns:
-        df['genre'] = df['genre'].fillna('').astype(str).str.split('|').str[0]
+        df['genre'] = df['genre'].fillna('기타').astype(str).str.split('|').str[0]
         df['genre'] = df['genre'].replace('', '기타')
+        
+    # nation 열 결측치 처리 (선버스트 오류 방지)
+    if 'nation' in df.columns:
+        df['nation'] = df['nation'].fillna('기타').astype(str)
+        df['nation'] = df['nation'].replace('', '기타')
         
     return df
 
