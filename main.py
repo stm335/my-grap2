@@ -76,7 +76,7 @@ st.plotly_chart(fig2, use_container_width=True)
 
 # 구분 구역 및 두 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 전체 박스오피스 관객수를 이끌어간 주요 장르와 그 안에서 실질적인 흥행을 견인한 특정 영화의 기여도를 직관적으로 파악할 수 있습니다.")
+st.info("💡 **이 GRAPH로 알 수 있는 것:** 영화의 종류가 많은 영화일 수록 관객의 수도 증가하는 추세이지만 영화의 종류가 적은 장르라고 적다고는 말 할수 없다는 것을 알 수 있다.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -156,3 +156,46 @@ st.plotly_chart(fig4, use_container_width=True)
 # 구분 구역 및 네 번째 그래프 설명 영역
 st.divider()
 st.info("💡 **이 그래프로 알 수 있는 것:** 대체로 개봉일 스크린수가 많을수록 최종 관객수도 증가하는 양(+)의 상관관계를 보이지만, 스크린수가 적어도 입소문으로 대흥행을 거두거나 반대로 많은 스크린수를 확보했음에도 흥행에 실패한 예외적인 사례도 함께 확인할 수 있습니다.")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 다섯 번째 그래프: 주요 장르별 총 관객수 박스플롯
+# ---------------------------------------------------------
+st.subheader("5. 주요 장르별 총 관객수 분포 (상자 그림)")
+
+# 영화 수 10편 이상인 장르만 추출
+genre_counts = df['genre'].value_counts()
+top_genres = genre_counts[genre_counts >= 10].index
+df_filtered = df[df['genre'].isin(top_genres)]
+
+# Plotly 상자 그림 생성
+fig5 = px.box(
+    df_filtered,
+    x='genre',
+    y='total_audi',
+    color='genre',
+    hover_name='movieNm',
+    points='outliers',
+    title='주요 장르(10편 이상)별 총 관객수 분포 및 이상치',
+    labels={
+        'genre': '장르',
+        'total_audi': '총 관객수 (명)'
+    }
+)
+
+fig5.update_traces(
+    hovertemplate='<b>%{hovertext}</b><br>장르: %{x}<br>관객수: %{y:,}명'
+)
+
+fig5.update_layout(
+    xaxis_title='장르 (10편 이상)',
+    yaxis_title='총 관객수 (명)',
+    showlegend=False
+)
+
+st.plotly_chart(fig5, use_container_width=True)
+
+# 구분 구역 및 다섯 번째 그래프 설명 영역
+st.divider()
+st.info("💡 **이 그래프로 알 수 있는 것:** 장르별 중간값과 분포 범위를 비교하여 안정적인 흥행 수치를 보이는 장르와 상자 밖의 이상치(Outlier) 점으로 표시된 독보적인 대박 흥행작을 쉽게 식별할 수 있습니다.")
