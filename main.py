@@ -76,4 +76,45 @@ st.plotly_chart(fig2, use_container_width=True)
 
 # 구분 구역 및 두 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 전체 박스오피스 관객수를 이끈 주요 장르와 그 안에서 실질적인 흥행을 견인한 특정 영화의 기여도를 직관적으로 파악할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 전체 박스오피스 관객수를 이끌어간 주요 장르와 그 안에서 실질적인 흥행을 견인한 특정 영화의 기여도를 직관적으로 파악할 수 있습니다.")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 세 번째 그래프: 총 관객수 히스토그램
+# ---------------------------------------------------------
+st.subheader("3. 총 관객수 분포 (히스토그램)")
+
+# Plotly 히스토그램 생성
+fig3 = px.histogram(
+    df,
+    x='total_audi',
+    nbins=30,
+    title='영화별 총 관객수 분포',
+    labels={'total_audi': '총 관객수 (명)', 'count': '영화 수'},
+    color_discrete_sequence=['#636EFA']
+)
+
+fig3.update_layout(
+    yaxis_title='영화 수',
+    xaxis_title='총 관객수 (명)',
+    bargap=0.1
+)
+
+fig3.update_traces(
+    hovertemplate='<b>관객수 구간:</b> %{x}명<br><b>영화 수:</b> %{y}편'
+)
+
+st.plotly_chart(fig3, use_container_width=True)
+
+# 동적 데이터 계산 (최고 관객수 영화 정보)
+top_movie = df.loc[df['total_audi'].idxmax()]
+top_movie_name = top_movie['movieNm']
+top_movie_audi = top_movie['total_audi']
+
+# 구분 구역 및 세 번째 그래프 설명 영역
+st.divider()
+st.info(
+    f"💡 **이 그래프로 알 수 있는 것:** 대부분의 영화가 100만~200만 명 이하의 저관객 구간에 빽빽하게 쏠려 있는 '오른쪽으로 긴 꼬리를 갖는 분포(Right-skewed Distribution)'를 보입니다. "
+    f"반면 가장 관객 수가 많은 영화는 **'{top_movie_name}'** (약 {top_movie_audi:,}명)로 극소수의 초대형 흥행작이 전체 관객수 상위를 독점하고 있음을 알 수 있습니다."
+)
