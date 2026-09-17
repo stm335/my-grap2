@@ -76,7 +76,7 @@ st.plotly_chart(fig2, use_container_width=True)
 
 # 구분 구역 및 두 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 GRAPH로 알 수 있는 것:** 영화의 종류가 많은 영화일 수록 관객의 수도 증가하는 추세이지만 영화의 종류가 적은 장르라고 적다고는 말 할수 없다는 것을 알 수 있다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 영화의 종류가 많은 영화일 수록 관객의 수도 증가하는 추세이지만 영화의 종류가 적은 장르라고 적다고는 말 할수 없다는 것을 알 수 있다.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -199,3 +199,43 @@ st.plotly_chart(fig5, use_container_width=True)
 # 구분 구역 및 다섯 번째 그래프 설명 영역
 st.divider()
 st.info("💡 **이 그래프로 알 수 있는 것:** 장르별 중간값과 분포 범위를 비교하여 안정적인 흥행 수치를 보이는 장르와 상자 밖의 이상치(Outlier) 점으로 표시된 독보적인 대박 흥행작을 쉽게 식별할 수 있습니다.")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 여섯 번째 그래프: 스크린수, 총 관객수, 첫 주 관객수 (버블 차트)
+# ---------------------------------------------------------
+st.subheader("6. 스크린수, 총 관객수, 첫 주 관객수의 관계 (버블 차트)")
+
+# Plotly 버블 차트 생성 (size = first_week_audi)
+fig6 = px.scatter(
+    df,
+    x='first_scrn',
+    y='total_audi',
+    size='first_week_audi',
+    color='genre',
+    hover_name='movieNm',
+    size_max=40,
+    title='개봉일 스크린수 vs 총 관객수 (점 크기: 개봉 첫 주 관객수)',
+    labels={
+        'first_scrn': '개봉일 스크린수 (개)',
+        'total_audi': '총 관객수 (명)',
+        'first_week_audi': '첫 주 관객수 (명)',
+        'genre': '장르'
+    }
+)
+
+fig6.update_traces(
+    hovertemplate='<b>%{hovertext}</b><br>장르: %{fullData.name}<br>개봉일 스크린수: %{x:,}개<br>총 관객수: %{y:,}명<br>첫 주 관객수: %{marker.size:,}명'
+)
+
+fig6.update_layout(
+    xaxis_title='개봉일 스크린수 (개)',
+    yaxis_title='총 관객수 (명)'
+)
+
+st.plotly_chart(fig6, use_container_width=True)
+
+# 구분 구역 및 여섯 번째 그래프 설명 영역
+st.divider()
+st.info("💡 **이 그래프로 알 수 있는 것:** 개봉 첫 주 관객수가 큰 영화일수록(버블의 크기가 클수록) 최종 총 관객수도 높게 형성되는 경향을 보여, 초반 흥행 기세(초반 화력)가 최종 흥행 성패를 결정짓는 핵심 요소임을 시각적으로 확인할 수 있습니다.")
