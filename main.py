@@ -118,3 +118,41 @@ st.info(
     f"💡 **이 그래프로 알 수 있는 것:** 대부분의 영화가 100만~200만 명 이하의 저관객 구간에 빽빽하게 쏠려 있는 '오른쪽으로 긴 꼬리를 갖는 분포(Right-skewed Distribution)'를 보입니다. "
     f"반면 가장 관객 수가 많은 영화는 **'{top_movie_name}'** (약 {top_movie_audi:,}명)로 극소수의 초대형 흥행작이 전체 관객수 상위를 독점하고 있음을 알 수 있습니다."
 )
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 네 번째 그래프: 개봉일 스크린수 vs 총 관객수 (산점도)
+# ---------------------------------------------------------
+st.subheader("4. 개봉일 스크린수와 총 관객수의 관계 (산점도)")
+
+# Plotly 산점도 생성
+fig4 = px.scatter(
+    df,
+    x='first_scrn',
+    y='total_audi',
+    color='genre',
+    hover_name='movieNm',
+    title='개봉일 스크린수 vs 총 관객수',
+    labels={
+        'first_scrn': '개봉일 스크린수 (개)',
+        'total_audi': '총 관객수 (명)',
+        'genre': '장르'
+    }
+)
+
+fig4.update_traces(
+    marker=dict(size=9, opacity=0.8),
+    hovertemplate='<b>%{hovertext}</b><br>장르: %{fullData.name}<br>개봉일 스크린수: %{x:,}개<br>총 관객수: %{y:,}명'
+)
+
+fig4.update_layout(
+    xaxis_title='개봉일 스크린수 (개)',
+    yaxis_title='총 관객수 (명)'
+)
+
+st.plotly_chart(fig4, use_container_width=True)
+
+# 구분 구역 및 네 번째 그래프 설명 영역
+st.divider()
+st.info("💡 **이 그래프로 알 수 있는 것:** 대체로 개봉일 스크린수가 많을수록 최종 관객수도 증가하는 양(+)의 상관관계를 보이지만, 스크린수가 적어도 입소문으로 대흥행을 거두거나 반대로 많은 스크린수를 확보했음에도 흥행에 실패한 예외적인 사례도 함께 확인할 수 있습니다.")
