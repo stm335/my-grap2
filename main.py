@@ -274,52 +274,66 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일�
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 여덟 번째 그래프: 주요 국가별 Top 10 영화의 시간에 따른 관객수 추이
+# 여덟 번째 그래프: 나라별 탭(칸) 분리 - TOP 10 영화 개봉 연도별 관객수 추이
 # ---------------------------------------------------------
-st.subheader("8. 주요 국가별 관객수 TOP 10 영화의 개봉 연도별 관객수 추이")
+st.subheader("8. 주요 국가별 TOP 10 영화의 개봉 연도별 관객수 추이")
 
-# 대표 3개 국(한국, 미국, 일본) 대상 Top 10 추출
-target_nations = ['한국', '미국', '일본']
-df_top10_by_nation = pd.DataFrame()
+# Streamlit 탭 생성 (나라별 칸 분리)
+tab_korea, tab_usa, tab_japan, tab_others = st.tabs(["🇰🇷 한국", "🇺🇸 미국", "🇯🇵 일본", "🌐 기타 국가"])
 
-for nation in target_nations:
-    df_nat = df[df['nation'] == nation].sort_values(by='total_audi', ascending=False).head(10)
-    df_top10_by_nation = pd.concat([df_top10_by_nation, df_nat])
+def render_nation_top10_chart(nation_name, filter_condition):
+    """국가별 TOP 10 영화 산점도/선 그래프를 그려주는 공통 함수"""
+    df_nat = df[filter_condition].sort_values(by='total_audi', ascending=False).head(10)
+    df_nat = df_nat.dropna(subset=['year']).sort_values(by='year')
+    
+    if df_nat.empty:
+        st.warning(f"{nation_name} 데이터가 존재하지 않습니다.")
+        return
 
-# 개봉연도(year) 기준 정렬
-df_top10_by_nation = df_top10_by_nation.dropna(subset=['year']).sort_values(by='year')
+    fig = px.scatter(
+        df_nat,
+        x='year',
+        y='total_audi',
+        color='genre',
+        hover_name='movieNm',
+        size='total_audi',
+        title=f'{nation_name} TOP 10 영화 개봉 연도별 관객수 분포',
+        labels={
+            'year': '개봉 연도',
+            'total_audi': '총 관객수 (명)',
+            'genre': '장르'
+        }
+    )
 
-# Plotly 산점도 + 선 그래프 생성
-fig8 = px.scatter(
-    df_top10_by_nation,
-    x='year',
-    y='total_audi',
-    color='nation',
-    symbol='genre',
-    hover_name='movieNm',
-    size='total_audi',
-    title='주요 국가별 TOP 10 영화의 개봉 연도 및 총 관객수 (점 크기: 총 관객수)',
-    labels={
-        'year': '개봉 연도',
-        'total_audi': '총 관객수 (명)',
-        'nation': '국가',
-        'genre': '장르'
-    }
-)
+    fig.update_traces(
+        marker=dict(opacity=0.8),
+        hovertemplate='<b>%{hovertext}</b><br>장르: %{fullData.name}<br>개봉연도: %{x}년<br>총 관객수: %{y:,}명'
+    )
 
-fig8.update_traces(
-    marker=dict(opacity=0.8),
-    hovertemplate='<b>%{hovertext}</b><br>국가: %{fullData.name}<br>개봉연도: %{x}년<br>총 관객수: %{y:,}명'
-)
+    fig.update_layout(
+        xaxis=dict(type='category'),
+        xaxis_title='개봉 연도',
+        yaxis_title='총 관객수 (명)'
+    )
 
-fig8.update_layout(
-    xaxis=dict(type='category'),
-    xaxis_title='개봉 연도',
-    yaxis_title='총 관객수 (명)'
-)
+    st.plotly_chart(fig, use_container_width=True)
 
-st.plotly_chart(fig8, use_container_width=True)
+# 탭 1: 한국
+with tab_korea:
+    render_nation_top10_chart("한국", df['nation'] == '한국')
+
+# 탭 2: 미국
+with tab_usa:
+    render_nation_top10_chart("미국", df['nation'] == '미국')
+
+# 탭 3: 일본
+with tab_japan:
+    render_nation_top10_chart("일본", df['nation'] == '일본')
+
+# 탭 4: 기타 국가
+with tab_others:
+    render_nation_top10_chart("기타 국가", ~df['nation'].isin(['한국', '미국', '일본']))
 
 # 구분 구역 및 여덟 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 국가별 흥행 TOP 10 영화들의 개봉 연도를 살펴보면, 한국은 시기별로 대작들이 고르게 등장하며 관객수 규모가 큰 반면, 일본은 특정 시기의 애니메이션 대작들에 흥행이 집중되는 경향 등 시간에 따른 흥행작의 패턴 변화를 알 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 각 국가 탭을 클릭하여 시기별 대표 흥행작과 선호 장르의 차이를 비교할 수 있습니다. 예를 들어 한국은 다양한 시기에 걸쳐 고르게 흥행 대작이 분포해 있는 반면, 일본은 특정 연도의 애니메이션 장르가 상위를 독점하는 경향을 보여줍니다.")
