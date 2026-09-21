@@ -13,12 +13,16 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
     
+    # openDt(개봉일)에서 개봉 연도(year) 추출
+    if 'openDt' in df.columns:
+        df['year'] = pd.to_datetime(df['openDt'], errors='coerce').dt.year
+    
     # genre 열 전처리 (첫 번째 장르만 추출 및 결측치 처리)
     if 'genre' in df.columns:
         df['genre'] = df['genre'].fillna('기타').astype(str).str.split('|').str[0]
         df['genre'] = df['genre'].replace('', '기타')
         
-    # nation 열 결측치 처리 (선버스트 오류 방지)
+    # nation 열 결측치 처리 (선버스트 및 8번 그래프 오류 방지)
     if 'nation' in df.columns:
         df['nation'] = df['nation'].fillna('기타').astype(str)
         df['nation'] = df['nation'].replace('', '기타')
@@ -119,9 +123,7 @@ top_movie_audi = top_movie['total_audi']
 
 # 구분 구역 및 세 번째 그래프 설명 영역
 st.divider()
-st.info(
-    f"💡 **이 그래프로 알 수 있는 것:** 대부분의 영화가 크게 흥행에 성공하지 못하고 극소수의 영화들만이 대흥행을 한다는 것을 알 수 있습니다."
-)
+st.info("💡 **이 그래프로 알 수 있는 것:** 대부분의 영화가 크게 흥행에 성공하지 못하고 극소수의 영화들만이 대흥행을 한다는 것을 알 수 있습니다.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -268,3 +270,56 @@ st.plotly_chart(fig7, use_container_width=True)
 # 구분 구역 및 일곱 번째 그래프 설명 영역
 st.divider()
 st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일본은 애니메이션, 미국은 다양한 장르의 관객수가 분포되어있는 것을 보았을 때 그 나라에서 어떠한 영화의 종류를 좋아하는지 알 수 있습니다")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# ---------------------------------------------------------
+# 여덟 번째 그래프: 주요 국가별 Top 10 영화의 시간에 따른 관객수 추이
+# ---------------------------------------------------------
+st.subheader("8. 주요 국가별 관객수 TOP 10 영화의 개봉 연도별 관객수 추이")
+
+# 대표 3개 국(한국, 미국, 일본) 대상 Top 10 추출
+target_nations = ['한국', '미국', '일본']
+df_top10_by_nation = pd.DataFrame()
+
+for nation in target_nations:
+    df_nat = df[df['nation'] == nation].sort_values(by='total_audi', ascending=False).head(10)
+    df_top10_by_nation = pd.concat([df_top10_by_nation, df_nat])
+
+# 개봉연도(year) 기준 정렬
+df_top10_by_nation = df_top10_by_nation.dropna(subset=['year']).sort_values(by='year')
+
+# Plotly 산점도 + 선 그래프 생성
+fig8 = px.scatter(
+    df_top10_by_nation,
+    x='year',
+    y='total_audi',
+    color='nation',
+    symbol='genre',
+    hover_name='movieNm',
+    size='total_audi',
+    title='주요 국가별 TOP 10 영화의 개봉 연도 및 총 관객수 (점 크기: 총 관객수)',
+    labels={
+        'year': '개봉 연도',
+        'total_audi': '총 관객수 (명)',
+        'nation': '국가',
+        'genre': '장르'
+    }
+)
+
+fig8.update_traces(
+    marker=dict(opacity=0.8),
+    hovertemplate='<b>%{hovertext}</b><br>국가: %{fullData.name}<br>개봉연도: %{x}년<br>총 관객수: %{y:,}명'
+)
+
+fig8.update_layout(
+    xaxis=dict(type='category'),
+    xaxis_title='개봉 연도',
+    yaxis_title='총 관객수 (명)'
+)
+
+st.plotly_chart(fig8, use_container_width=True)
+
+# 구분 구역 및 여덟 번째 그래프 설명 영역
+st.divider()
+st.info("💡 **이 그래프로 알 수 있는 것:** 국가별 흥행 TOP 10 영화들의 개봉 연도를 살펴보면, 한국은 시기별로 대작들이 고르게 등장하며 관객수 규모가 큰 반면, 일본은 특정 시기의 애니메이션 대작들에 흥행이 집중되는 경향 등 시간에 따른 흥행작의 패턴 변화를 알 수 있습니다.")
