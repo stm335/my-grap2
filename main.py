@@ -253,47 +253,50 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일�
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 여덟 번째 그래프: [월별] 장르별 관객수 변화 추이 (선 그래프)
+# 여덟 번째 그래프: [개별 분할 영역 차트] 장르별 월 관객수 변화 추이
 # ---------------------------------------------------------
-st.subheader("8. 월(Month)별 장르 관객수 변화 추이")
+st.subheader("8. 장르별 월(Month) 관객수 변화 추이 (분할 비교)")
 
-# 개봉 월 데이터 및 결측치 처리
+# 개봉 월 데이터 전처리
 df_valid_month = df.dropna(subset=['month']).copy()
 
-# 주요 상위 장르 6~7개 추출
-top_genres = df_valid_month['genre'].value_counts().head(7).index
+# 가장 영화 편수가 많은 주요 상위 6개 장르 추출
+top_genres = df_valid_month['genre'].value_counts().head(6).index
 df_top_genre = df_valid_month[df_valid_month['genre'].isin(top_genres)]
 
-# 개봉 월 & 장르별 총 관객수 집계 및 정렬
+# 개봉 월 & 장르별 총 관객수 집계
 genre_monthly_audi = df_top_genre.groupby(['month', 'genre'])['total_audi'].sum().reset_index()
 genre_monthly_audi = genre_monthly_audi.sort_values(by='month')
 
-fig8 = px.line(
+# facet_col을 사용하여 각 장르별 그래프를 독립적으로 3열 2행으로 분할 배치
+fig8 = px.area(
     genre_monthly_audi,
     x='month',
     y='total_audi',
     color='genre',
-    markers=True,
-    title='개봉 월별 주요 장르 관객수 변화 추이',
+    facet_col='genre',
+    facet_col_wrap=3, # 3열 분할
+    title='주요 장르별 개봉 월 관객수 추이 (장르별 독립 차트)',
     labels={
-        'month': '개봉 월 (YYYY-MM)',
-        'total_audi': '총 관객수 (명)',
+        'month': '개봉 월',
+        'total_audi': '관객수 (명)',
         'genre': '장르'
     }
 )
 
 fig8.update_traces(
-    hovertemplate='<b>개봉월:</b> %{x}<br><b>장르:</b> %{fullData.name}<br><b>관객수 합계:</b> %{y:,}명'
+    hovertemplate='<b>개봉월:</b> %{x}<br><b>관객수:</b> %{y:,}명'
 )
 
+# 각 그래프의 제목 서식 및 레이아웃 다듬기
+fig8.for_each_annotation(lambda a: a.update(text=f"<b>장르: {a.text.split('=')[-1]}</b>"))
+
 fig8.update_layout(
-    xaxis_title='개봉 월 (YYYY-MM)',
-    yaxis_title='총 관객수 (명)',
-    hovermode='x unified', # 특정 월에 마우스 올리면 해당 월의 모든 장르 관객수 동시 표시
-    height=550
+    height=600,
+    showlegend=False # 장르 제목이 그래프 상단에 적히므로 범례 숨김으로 공간 확보
 )
 
 st.plotly_chart(fig8, use_container_width=True)
 
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 월 단위(YYYY-MM)로 주요 장르별 관객 수 총합의 상승/하락 흐름을 확인할 수 있습니다. 특정 달에 어떤 장르가 흥행을 주도했는지, 계절이나 월에 따른 장르별 흥행 변동 패턴을 보다 세밀하게 파악할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 각 장르별로 차트를 분할하여 복잡하게 선이 겹치지 않습니다. 액션, 드라마, 애니메이션 등 개별 장르의 관객수가 어느 달(Month)에 크게 늘어나거나 줄어드는지 훨씬 선명하게 파악할 수 있습니다.")
