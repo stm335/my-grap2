@@ -13,11 +13,12 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
     
-    # openDt에서 연도 추출 (전처리)
+    # openDt에서 연도 및 개봉 월(YYYY-MM) 추출
     if 'openDt' in df.columns:
         open_str = df['openDt'].astype(str).str.replace('.0', '', regex=False).str.strip()
-        df['year'] = pd.to_numeric(open_str.str[:4], errors='coerce')
-        df.loc[(df['year'] < 1950) | (df['year'] > 2030), 'year'] = None
+        df['open_date'] = pd.to_datetime(open_str, format='%Y%m%d', errors='coerce')
+        df['year'] = df['open_date'].dt.year
+        df['month'] = df['open_date'].dt.strftime('%Y-%m')  # YYYY-MM 포맷
     
     # genre 열 전처리 (첫 번째 장르만 추출 및 결측치 처리)
     if 'genre' in df.columns:
@@ -252,47 +253,47 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일�
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 여덟 번째 그래프: 시간에 따른 장르별 관객수 변화 추이 (선 그래프)
+# 여덟 번째 그래프: [월별] 장르별 관객수 변화 추이 (선 그래프)
 # ---------------------------------------------------------
-st.subheader("8. 시간에 따른 장르별 관객수 변화 추이")
+st.subheader("8. 월(Month)별 장르 관객수 변화 추이")
 
-df_valid_year = df.dropna(subset=['year']).copy()
-df_valid_year['year'] = df_valid_year['year'].astype(int)
+# 개봉 월 데이터 및 결측치 처리
+df_valid_month = df.dropna(subset=['month']).copy()
 
-# 주요 상위 장르 추출
-top_genres = df_valid_year['genre'].value_counts().head(7).index
-df_top_genre = df_valid_year[df_valid_year['genre'].isin(top_genres)]
+# 주요 상위 장르 6~7개 추출
+top_genres = df_valid_month['genre'].value_counts().head(7).index
+df_top_genre = df_valid_month[df_valid_month['genre'].isin(top_genres)]
 
-# 연도 & 장르별 총 관객수 집계
-genre_yearly_audi = df_top_genre.groupby(['year', 'genre'])['total_audi'].sum().reset_index()
+# 개봉 월 & 장르별 총 관객수 집계 및 정렬
+genre_monthly_audi = df_top_genre.groupby(['month', 'genre'])['total_audi'].sum().reset_index()
+genre_monthly_audi = genre_monthly_audi.sort_values(by='month')
 
 fig8 = px.line(
-    genre_yearly_audi,
-    x='year',
+    genre_monthly_audi,
+    x='month',
     y='total_audi',
     color='genre',
     markers=True,
-    title='연도별 주요 장르 관객수 변화 추이',
+    title='개봉 월별 주요 장르 관객수 변화 추이',
     labels={
-        'year': '개봉 연도',
+        'month': '개봉 월 (YYYY-MM)',
         'total_audi': '총 관객수 (명)',
         'genre': '장르'
     }
 )
 
 fig8.update_traces(
-    hovertemplate='<b>연도:</b> %{x}년<br><b>장르:</b> %{fullData.name}<br><b>관객수 합계:</b> %{y:,}명'
+    hovertemplate='<b>개봉월:</b> %{x}<br><b>장르:</b> %{fullData.name}<br><b>관객수 합계:</b> %{y:,}명'
 )
 
 fig8.update_layout(
-    xaxis_title='개봉 연도',
+    xaxis_title='개봉 월 (YYYY-MM)',
     yaxis_title='총 관객수 (명)',
-    xaxis=dict(dtick=1),
-    hovermode='x unified',
+    hovermode='x unified', # 특정 월에 마우스 올리면 해당 월의 모든 장르 관객수 동시 표시
     height=550
 )
 
 st.plotly_chart(fig8, use_container_width=True)
 
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 시간에 따라 특정 장르의 인기와 관객 수 총합이 어떻게 변화하는지 한눈에 확인할 수 있습니다. 연도별로 특정 장르가 흥행을 주도했는지 아니면 장르 전반의 관객수가 감소/증가했는지 유기적인 변화 흐름을 파악할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 월 단위(YYYY-MM)로 주요 장르별 관객 수 총합의 상승/하락 흐름을 확인할 수 있습니다. 특정 달에 어떤 장르가 흥행을 주도했는지, 계절이나 월에 따른 장르별 흥행 변동 패턴을 보다 세밀하게 파악할 수 있습니다.")
