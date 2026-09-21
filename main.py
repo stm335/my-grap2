@@ -13,19 +13,14 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
     
-    # openDt에서 연도 및 개봉 월(YYYY-MM) 추출
+    # openDt에서 개봉 월(YYYY-MM) 추출
     if 'openDt' in df.columns:
-        # 문자열 정리
         open_str = df['openDt'].astype(str).str.replace('.0', '', regex=False).str.strip()
-        
-        # YYYYMMDD 또는 YYYY-MM-DD 형식을 pd.to_datetime으로 일괄 변환
         df['open_date'] = pd.to_datetime(open_str, format='%Y%m%d', errors='coerce')
-        
-        # 연도 및 개봉 월(YYYY-MM) 추출
         df['year'] = df['open_date'].dt.year
         df['month'] = df['open_date'].dt.strftime('%Y-%m')
     
-    # genre 열 전처리 (첫 번째 장르만 추출 및 결측치 처리)
+    # genre 열 전처리
     if 'genre' in df.columns:
         df['genre'] = df['genre'].fillna('기타').astype(str).str.split('|').str[0]
         df['genre'] = df['genre'].replace('', '기타')
@@ -258,67 +253,64 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일�
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 여덟 번째 그래프: [월 기준] 국가별 1위 영화 및 관객수 (막대그래프)
+# 여덟 번째 그래프: [모든 월 통합] 월별 국가별 1위 영화 및 관객수
 # ---------------------------------------------------------
-st.subheader("8. 월별 제작 국가별 1위 흥행 영화 및 관객수 비교")
+st.subheader("8. 모든 월별 주요 국가 1위 영화 및 관객수 비교 (통합 시각화)")
 
-# 월 선택 셀렉트박스 (사이드바 또는 메인 화면에 생성)
-available_months = sorted(df['month'].dropna().unique(), reverse=True)
+# 유효한 개봉월 데이터 및 주요 국가 데이터 필터링
+target_nations = ['한국', '미국', '일본']
+df_valid = df.dropna(subset=['month']).copy()
 
-if available_months:
-    selected_month = st.selectbox("📅 조회할 개봉 월을 선택하세요:", available_months, index=0)
-    
-    # 선택된 월의 데이터 필터링
-    df_month = df[df['month'] == selected_month]
-    
-    # 주요 국가(한국, 미국, 일본) 대상 필터링
-    target_nations = ['한국', '미국', '일본']
-    top1_list = []
+# 모든 월 x 국가 조합에서 관객수 1위 영화 추출
+monthly_top_list = []
+all_months = sorted(df_valid['month'].unique())
 
-    for nation in target_nations:
-        df_nat = df_month[df_month['nation'] == nation].sort_values(by='total_audi', ascending=False)
+for m in all_months:
+    df_m = df_valid[df_valid['month'] == m]
+    for nat in target_nations:
+        df_nat = df_m[df_m['nation'] == nat].sort_values(by='total_audi', ascending=False)
         if not df_nat.empty:
-            top1_list.append(df_nat.iloc[0])
+            monthly_top_list.append(df_nat.iloc[0])
 
-    if top1_list:
-        df_top1 = pd.DataFrame(top1_list)
+if monthly_top_list:
+    df_monthly_top = pd.DataFrame(monthly_top_list)
 
-        # 막대 상단 라벨 (영화명 + 관객수)
-        df_top1['display_text'] = df_top1.apply(
-            lambda row: f"<b>{row['movieNm']}</b><br>({row['total_audi']:,}명)", axis=1
-        )
+    # 막대 표기용 텍스트 (영화 제목 + 관객수)
+    df_monthly_top['display_text'] = df_monthly_top.apply(
+        lambda row: f"<b>{row['movieNm']}</b><br>({row['total_audi']:,}명)", axis=1
+    )
 
-        fig8 = px.bar(
-            df_top1,
-            x='nation',
-            y='total_audi',
-            color='genre',
-            text='display_text',
-            hover_name='movieNm',
-            title=f'<b>{selected_month}</b> 개봉 영화 중 국가별 1위 영화 및 관객수',
-            labels={
-                'nation': '제작 국가',
-                'total_audi': '해당 월 관객수 (명)',
-                'genre': '장르'
-            }
-        )
+    # 그룹화된 막대그래프 (x축: 개봉 월, 색상: 제작 국가)
+    fig8 = px.bar(
+        df_monthly_top,
+        x='month',
+        y='total_audi',
+        color='nation',
+        barmode='group',
+        text='display_text',
+        hover_name='movieNm',
+        title='모든 개봉 월별 제작 국가(한국/미국/일본) 1위 영화 관객수 비교',
+        labels={
+            'month': '개봉 월',
+            'total_audi': '해당 월 관객수 (명)',
+            'nation': '제작 국가'
+        }
+    )
 
-        fig8.update_traces(
-            textposition='outside',
-            hovertemplate='<b>국가:</b> %{x}<br><b>1위 영화:</b> %{hovertext}<br><b>장르:</b> %{fullData.name}<br><b>관객수:</b> %{y:,}명'
-        )
+    fig8.update_traces(
+        textposition='outside',
+        hovertemplate='<b>개봉월:</b> %{x}<br><b>국가:</b> %{fullData.name}<br><b>1위 영화:</b> %{hovertext}<br><b>관객수:</b> %{y:,}명'
+    )
 
-        max_audi = df_top1['total_audi'].max()
-        fig8.update_layout(
-            xaxis_title='제작 국가',
-            yaxis_title='관객수 (명)',
-            yaxis=dict(range=[0, max_audi * 1.3]),
-            bargap=0.4
-        )
+    max_audi = df_monthly_top['total_audi'].max()
+    fig8.update_layout(
+        xaxis_title='개봉 월 (YYYY-MM)',
+        yaxis_title='관객수 (명)',
+        yaxis=dict(range=[0, max_audi * 1.3]),
+        height=600
+    )
 
-        st.plotly_chart(fig8, use_container_width=True)
-    else:
-        st.warning(f"{selected_month}에 개봉한 한국/미국/일본 영화 데이터가 없습니다.")
+    st.plotly_chart(fig8, use_container_width=True)
 
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 선택한 월(Month)에 개봉한 한국, 미국, 일본 영화 중 각 나라에서 가장 높은 관객수를 기록한 1위 영화와 당시 관객수를 한눈에 비교할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 선택 클릭 없이 모든 개봉 월별로 한국, 미국, 일본에서 각각 1위를 기록한 영화와 관객수를 한눈에 시간 순서대로 비교할 수 있습니다.")
