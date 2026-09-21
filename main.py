@@ -13,9 +13,11 @@ def load_data():
     url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
     df = pd.read_csv(url)
     
-    # openDt(개봉일)에서 개봉 연도(year) 추출
+    # openDt에서 연도 추출
     if 'openDt' in df.columns:
-        df['year'] = pd.to_datetime(df['openDt'], errors='coerce').dt.year
+        open_str = df['openDt'].astype(str).str.replace('.0', '', regex=False).str.strip()
+        df['year'] = pd.to_numeric(open_str.str[:4], errors='coerce')
+        df.loc[(df['year'] < 1950) | (df['year'] > 2030), 'year'] = None
     
     # genre 열 전처리 (첫 번째 장르만 추출 및 결측치 처리)
     if 'genre' in df.columns:
@@ -274,61 +276,59 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일�
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 여덟 번째 그래프: 주요 국가별 3개 칸 동시 배치 (한국, 미국, 일본 TOP 10)
+# 여덟 번째 그래프: 주요 국가별 1등 영화 비교 막대그래프
 # ---------------------------------------------------------
-st.subheader("8. 주요 국가별 TOP 10 영화의 개봉 연도별 관객수 추이 비교")
+st.subheader("8. 주요 제작 국가별 1위 흥행 영화 관객수 비교")
 
-# 3개의 열(Column) 생성
-col1, col2, col3 = st.columns(3)
+# 주요 3개 국가(한국, 미국, 일본)의 관객수 1위 영화 추출
+target_nations = ['한국', '미국', '일본']
+top1_list = []
 
-def render_nation_chart(container, nation_name):
-    """지정된 컨테이너(컬럼)에 국가별 TOP 10 영화 차트를 그리는 함수"""
-    df_nat = df[df['nation'] == nation_name].sort_values(by='total_audi', ascending=False).head(10)
-    df_nat = df_nat.dropna(subset=['year']).sort_values(by='year')
-    
-    if df_nat.empty:
-        container.warning(f"{nation_name} 데이터가 없습니다.")
-        return
+for nation in target_nations:
+    df_nat = df[df['nation'] == nation].sort_values(by='total_audi', ascending=False)
+    if not df_nat.empty:
+        top1_list.append(df_nat.iloc[0])
 
-    fig = px.scatter(
-        df_nat,
-        x='year',
-        y='total_audi',
-        color='genre',
-        hover_name='movieNm',
-        size='total_audi',
-        title=f'<b>{nation_name}</b> TOP 10 영화',
-        labels={
-            'year': '개봉 연도',
-            'total_audi': '총 관객수',
-            'genre': '장르'
-        }
-    )
+df_top1 = pd.DataFrame(top1_list)
 
-    fig.update_traces(
-        marker=dict(opacity=0.8),
-        hovertemplate='<b>%{hovertext}</b><br>장르: %{fullData.name}<br>개봉연도: %{x}년<br>총 관객수: %{y:,}명'
-    )
+# 막대 위에 표시할 라벨 생성 (예: "명량\n(17,615,844명)")
+df_top1['display_text'] = df_top1.apply(
+    lambda row: f"<b>{row['movieNm']}</b><br>({row['total_audi']:,}명)", axis=1
+)
 
-    fig.update_layout(
-        xaxis=dict(type='category'),
-        xaxis_title='개봉 연도',
-        yaxis_title='총 관객수 (명)',
-        margin=dict(l=10, r=10, t=40, b=10)
-    )
+# Plotly 막대그래프 생성
+fig8 = px.bar(
+    df_top1,
+    x='nation',
+    y='total_audi',
+    color='genre',
+    text='display_text',
+    hover_name='movieNm',
+    title='주요 국가별 최다 관객수 1위 영화',
+    labels={
+        'nation': '제작 국가',
+        'total_audi': '총 관객수 (명)',
+        'genre': '장르'
+    }
+)
 
-    container.plotly_chart(fig, use_container_width=True)
+# 막대 텍스트 위치 및 호버 설정
+fig8.update_traces(
+    textposition='outside',
+    hovertemplate='<b>국가:</b> %{x}<br><b>1위 영화:</b> %{hovertext}<br><b>장르:</b> %{fullData.name}<br><b>총 관객수:</b> %{y:,}명'
+)
 
-# 각 컬럼에 차트 렌더링
-with col1:
-    render_nation_chart(col1, "한국")
+# 그래프 레이아웃 최적화 (막대 위 글씨가 잘리지 않도록 y축 상단 여백 추가)
+max_audi = df_top1['total_audi'].max()
+fig8.update_layout(
+    xaxis_title='제작 국가',
+    yaxis_title='총 관객수 (명)',
+    yaxis=dict(range=[0, max_audi * 1.2]),
+    bargap=0.4
+)
 
-with col2:
-    render_nation_chart(col2, "미국")
-
-with col3:
-    render_nation_chart(col3, "일본")
+st.plotly_chart(fig8, use_container_width=True)
 
 # 구분 구역 및 여덟 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 3개 국가의 TOP 10 영화들을 한눈에 비교할 수 있습니다. 한국은 개봉 연도별로 흥행 대작이 고르게 분포하고 드라마/액션 등이 주를 이루는 반면, 미국은 다양한 시기에 SF/액션 위주, 일본은 특정 개봉 연도의 애니메이션 장르에 높은 관객수가 집중되는 특성을 비교해 볼 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 각 국가별 역대 가장 많은 관객을 동원한 1위 영화를 직접적으로 비교할 수 있습니다. 한국 1위 영화의 압도적인 관객수 규모와 더불어 국가별 최다 흥행작의 장르적 특징(예: 애니메이션, 액션 등)도 함께 파악할 수 있습니다.")
