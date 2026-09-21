@@ -274,20 +274,20 @@ st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일�
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 여덟 번째 그래프: 나라별 탭(칸) 분리 - TOP 10 영화 개봉 연도별 관객수 추이
+# 여덟 번째 그래프: 주요 국가별 3개 칸 동시 배치 (한국, 미국, 일본 TOP 10)
 # ---------------------------------------------------------
-st.subheader("8. 주요 국가별 TOP 10 영화의 개봉 연도별 관객수 추이")
+st.subheader("8. 주요 국가별 TOP 10 영화의 개봉 연도별 관객수 추이 비교")
 
-# Streamlit 탭 생성 (나라별 칸 분리)
-tab_korea, tab_usa, tab_japan, tab_others = st.tabs(["🇰🇷 한국", "🇺🇸 미국", "🇯🇵 일본", "🌐 기타 국가"])
+# 3개의 열(Column) 생성
+col1, col2, col3 = st.columns(3)
 
-def render_nation_top10_chart(nation_name, filter_condition):
-    """국가별 TOP 10 영화 산점도/선 그래프를 그려주는 공통 함수"""
-    df_nat = df[filter_condition].sort_values(by='total_audi', ascending=False).head(10)
+def render_nation_chart(container, nation_name):
+    """지정된 컨테이너(컬럼)에 국가별 TOP 10 영화 차트를 그리는 함수"""
+    df_nat = df[df['nation'] == nation_name].sort_values(by='total_audi', ascending=False).head(10)
     df_nat = df_nat.dropna(subset=['year']).sort_values(by='year')
     
     if df_nat.empty:
-        st.warning(f"{nation_name} 데이터가 존재하지 않습니다.")
+        container.warning(f"{nation_name} 데이터가 없습니다.")
         return
 
     fig = px.scatter(
@@ -297,10 +297,10 @@ def render_nation_top10_chart(nation_name, filter_condition):
         color='genre',
         hover_name='movieNm',
         size='total_audi',
-        title=f'{nation_name} TOP 10 영화 개봉 연도별 관객수 분포',
+        title=f'<b>{nation_name}</b> TOP 10 영화',
         labels={
             'year': '개봉 연도',
-            'total_audi': '총 관객수 (명)',
+            'total_audi': '총 관객수',
             'genre': '장르'
         }
     )
@@ -313,27 +313,22 @@ def render_nation_top10_chart(nation_name, filter_condition):
     fig.update_layout(
         xaxis=dict(type='category'),
         xaxis_title='개봉 연도',
-        yaxis_title='총 관객수 (명)'
+        yaxis_title='총 관객수 (명)',
+        margin=dict(l=10, r=10, t=40, b=10)
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    container.plotly_chart(fig, use_container_width=True)
 
-# 탭 1: 한국
-with tab_korea:
-    render_nation_top10_chart("한국", df['nation'] == '한국')
+# 각 컬럼에 차트 렌더링
+with col1:
+    render_nation_chart(col1, "한국")
 
-# 탭 2: 미국
-with tab_usa:
-    render_nation_top10_chart("미국", df['nation'] == '미국')
+with col2:
+    render_nation_chart(col2, "미국")
 
-# 탭 3: 일본
-with tab_japan:
-    render_nation_top10_chart("일본", df['nation'] == '일본')
-
-# 탭 4: 기타 국가
-with tab_others:
-    render_nation_top10_chart("기타 국가", ~df['nation'].isin(['한국', '미국', '일본']))
+with col3:
+    render_nation_chart(col3, "일본")
 
 # 구분 구역 및 여덟 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 각 국가 탭을 클릭하여 시기별 대표 흥행작과 선호 장르의 차이를 비교할 수 있습니다. 예를 들어 한국은 다양한 시기에 걸쳐 고르게 흥행 대작이 분포해 있는 반면, 일본은 특정 연도의 애니메이션 장르가 상위를 독점하는 경향을 보여줍니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 3개 국가의 TOP 10 영화들을 한눈에 비교할 수 있습니다. 한국은 개봉 연도별로 흥행 대작이 고르게 분포하고 드라마/액션 등이 주를 이루는 반면, 미국은 다양한 시기에 SF/액션 위주, 일본은 특정 개봉 연도의 애니메이션 장르에 높은 관객수가 집중되는 특성을 비교해 볼 수 있습니다.")
