@@ -58,7 +58,7 @@ fig1.update_traces(
 st.plotly_chart(fig1, use_container_width=True)
 
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 특정 장르가 차지하는 비중을 직관적으로 보여준다. 하지만 얼마나 많은 관객이 봤는지는 알기 힘들다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 특정 장르가 차지하는 비중을 직관적으로 보여준다. 하지만 얼마나 많은 관객이 봤는지는 알기 힘들다. 또한 왕과 사는 남자처럼 특정 장르의 영화의 수는 적지만 관객수는 많은 것 처럼 얼마나 많이 인기가 있었는지 알기 어렵다")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
