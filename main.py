@@ -1,316 +1,49 @@
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-
-# 페이지 기본 설정
-st.set_page_config(page_title="영화 데이터 그래프 도감 2 - 분포와 관계", layout="wide")
-
-st.title("🎬 영화 데이터 그래프 도감 2 - 분포와 관계")
-
-# 데이터 불러오기 및 전처리
-@st.cache_data
-def load_data():
-    url = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
-    df = pd.read_csv(url)
-    
-    # openDt에서 개봉 월(YYYY-MM) 추출
-    if 'openDt' in df.columns:
-        open_str = df['openDt'].astype(str).str.replace('.0', '', regex=False).str.strip()
-        df['open_date'] = pd.to_datetime(open_str, format='%Y%m%d', errors='coerce')
-        df['year'] = df['open_date'].dt.year
-        df['month'] = df['open_date'].dt.strftime('%Y-%m')
-    
-    # genre 열 전처리
-    if 'genre' in df.columns:
-        df['genre'] = df['genre'].fillna('기타').astype(str).str.split('|').str[0]
-        df['genre'] = df['genre'].replace('', '기타')
-        
-    # nation 열 결측치 처리
-    if 'nation' in df.columns:
-        df['nation'] = df['nation'].fillna('기타').astype(str)
-        df['nation'] = df['nation'].replace('', '기타')
-        
-    return df
-
-df = load_data()
-
 # ---------------------------------------------------------
-# 첫 번째 그래프: 장르별 영화 편수 (플롯리 도넛 그래프)
+# 여덟 번째 그래프: 연도/월별 주요 장르 관객수 변화 추이 (선 그래프)
 # ---------------------------------------------------------
-st.subheader("1. 장르별 영화 편수 분포")
+st.subheader("8. 시간에 따른 장르별 관객수 변화 추이")
 
-genre_counts = df['genre'].value_counts().reset_index()
-genre_counts.columns = ['genre', 'count']
+# 연도별/장르별 총 관객수 집계 (결측치 제외)
+df_valid_year = df.dropna(subset=['year']).copy()
+df_valid_year['year'] = df_valid_year['year'].astype(int)
 
-fig1 = px.pie(
-    genre_counts, 
-    names='genre', 
-    values='count', 
-    hole=0.4,
-    title='장르별 영화 비율 및 편수'
-)
+# 영화 편수가 많은 상위 주요 장르만 추출 (데이터 시각성 확보)
+top_genres = df_valid_year['genre'].value_counts().head(7).index
+df_top_genre = df_valid_year[df_valid_year['genre'].isin(top_genres)]
 
-fig1.update_traces(
-    textinfo='percent+label',
-    hovertemplate='<b>장르:</b> %{label}<br><b>편수:</b> %{value}편<br><b>비율:</b> %{percent}'
-)
+# 연도 & 장르별 관객수 합계 계산
+genre_yearly_audi = df_top_genre.groupby(['year', 'genre'])['total_audi'].sum().reset_index()
 
-st.plotly_chart(fig1, use_container_width=True)
-
-st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 특정 장르가 차지하는 비중을 직관적으로 보여준다. 하지만 얼마나 많은 관객이 봤는지는 알기 힘들다.")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 두 번째 그래프: 장르별 영화 관객수 트리맵
-# ---------------------------------------------------------
-st.subheader("2. 장르 및 영화별 총 관객수 분포 (트리맵)")
-
-fig2 = px.treemap(
-    df,
-    path=['genre', 'movieNm'],
-    values='total_audi',
-    title='장르 및 영화별 총 관객수 비율'
-)
-
-fig2.update_traces(
-    hovertemplate='<b>영역/영화명:</b> %{label}<br><b>총 관객수:</b> %{value:,}명'
-)
-
-st.plotly_chart(fig2, use_container_width=True)
-
-st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 영화의 종류가 많은 영화일 수록 관객의 수도 증가하는 추세이지만 영화의 종류가 적은 장르라고 적다고는 말 할수 없다는 것을 알 수 있다.")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 세 번째 그래프: 총 관객수 히스토그램
-# ---------------------------------------------------------
-st.subheader("3. 총 관객수 분포 (히스토그램)")
-
-fig3 = px.histogram(
-    df,
-    x='total_audi',
-    nbins=30,
-    title='영화별 총 관객수 분포',
-    labels={'total_audi': '총 관객수 (명)', 'count': '영화 수'},
-    color_discrete_sequence=['#636EFA']
-)
-
-fig3.update_layout(
-    yaxis_title='영화 수',
-    xaxis_title='총 관객수 (명)',
-    bargap=0.1
-)
-
-fig3.update_traces(
-    hovertemplate='<b>관객수 구간:</b> %{x}명<br><b>영화 수:</b> %{y}편'
-)
-
-st.plotly_chart(fig3, use_container_width=True)
-
-st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 대부분의 영화가 크게 흥행에 성공하지 못하고 극소수의 영화들만이 대흥행을 한다는 것을 알 수 있습니다.")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 네 번째 그래프: 개봉일 스크린수 vs 총 관객수 (산점도)
-# ---------------------------------------------------------
-st.subheader("4. 개봉일 스크린수와 총 관객수의 관계 (산점도)")
-
-fig4 = px.scatter(
-    df,
-    x='first_scrn',
+# Plotly 선 그래프(Line Chart) 생성
+fig8 = px.line(
+    genre_yearly_audi,
+    x='year',
     y='total_audi',
     color='genre',
-    hover_name='movieNm',
-    title='개봉일 스크린수 vs 총 관객수',
+    markers=True,
+    title='연도별 주요 장르 관객수 변화 추이',
     labels={
-        'first_scrn': '개봉일 스크린수 (개)',
+        'year': '개봉 연도',
         'total_audi': '총 관객수 (명)',
         'genre': '장르'
     }
 )
 
-fig4.update_traces(
-    marker=dict(size=9, opacity=0.8),
-    hovertemplate='<b>%{hovertext}</b><br>장르: %{fullData.name}<br>개봉일 스크린수: %{x:,}개<br>총 관객수: %{y:,}명'
+# 호버 서식 및 레이아웃 설정
+fig8.update_traces(
+    hovertemplate='<b>연도:</b> %{x}년<br><b>장르:</b> %{fullData.name}<br><b>관객수 합계:</b> %{y:,}명'
 )
 
-fig4.update_layout(
-    xaxis_title='개봉일 스크린수 (개)',
-    yaxis_title='총 관객수 (명)'
-)
-
-st.plotly_chart(fig4, use_container_width=True)
-
-st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 스크린의 수가 증가할 수록 곽객의 수도 증가하는 추세이지만 왕과사는 남자처럼 엄청나게 많은 수의 스크린이 아니여도 대흥행을 할 수 있고 호프처럼 많은 스크린 수에도 불구하고 큰 흥행에 성공하지 못한 경우도 있다.")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 다섯 번째 그래프: 주요 장르별 총 관객수 박스플롯
-# ---------------------------------------------------------
-st.subheader("5. 주요 장르별 총 관객수 분포 (상자 그림)")
-
-genre_counts = df['genre'].value_counts()
-top_genres = genre_counts[genre_counts >= 10].index
-df_filtered = df[df['genre'].isin(top_genres)]
-
-fig5 = px.box(
-    df_filtered,
-    x='genre',
-    y='total_audi',
-    color='genre',
-    hover_name='movieNm',
-    points='outliers',
-    title='주요 장르(10편 이상)별 총 관객수 분포 및 이상치',
-    labels={
-        'genre': '장르',
-        'total_audi': '총 관객수 (명)'
-    }
-)
-
-fig5.update_traces(
-    hovertemplate='<b>%{hovertext}</b><br>장르: %{x}<br>관객수: %{y:,}명'
-)
-
-fig5.update_layout(
-    xaxis_title='장르 (10편 이상)',
+fig8.update_layout(
+    xaxis_title='개봉 연도',
     yaxis_title='총 관객수 (명)',
-    showlegend=False
+    xaxis=dict(dtick=1),  # 연도 눈금 단위 설정
+    hovermode='x unified', # 동일 연도의 모든 장르 관객수 한번에 보기
+    height=550
 )
 
-st.plotly_chart(fig5, use_container_width=True)
+st.plotly_chart(fig8, use_container_width=True)
 
+# 구분 구역 및 여덟 번째 그래프 설명 영역
 st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 애니메이션의 경우는 각각의 영화마다 본 사람의 수가 차이가 확연히 나지만 드라마의 경우 대부분 비슷한 관객수를 가졌다는 것을 알 수 있습니다")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 여섯 번째 그래프: 스크린수, 총 관객수, 첫 주 관객수 (버블 차트)
-# ---------------------------------------------------------
-st.subheader("6. 스크린수, 총 관객수, 첫 주 관객수의 관계 (버블 차트)")
-
-fig6 = px.scatter(
-    df,
-    x='first_scrn',
-    y='total_audi',
-    size='first_week_audi',
-    color='genre',
-    hover_name='movieNm',
-    size_max=40,
-    title='개봉일 스크린수 vs 총 관객수 (점 크기: 개봉 첫 주 관객수)',
-    labels={
-        'first_scrn': '개봉일 스크린수 (개)',
-        'total_audi': '총 관객수 (명)',
-        'first_week_audi': '첫 주 관객수 (명)',
-        'genre': '장르'
-    }
-)
-
-fig6.update_traces(
-    hovertemplate='<b>%{hovertext}</b><br>장르: %{fullData.name}<br>개봉일 스크린수: %{x:,}개<br>총 관객수: %{y:,}명<br>첫 주 관객수: %{marker.size:,}명'
-)
-
-fig6.update_layout(
-    xaxis_title='개봉일 스크린수 (개)',
-    yaxis_title='총 관객수 (명)'
-)
-
-st.plotly_chart(fig6, use_container_width=True)
-
-st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 대체로 스크린 수가 많을 수록,초기 관객수가 많을 수록 총 관객수가 증가하는 추세이지만 왕과 사는 남자처럼 초기 관객수가 많지 않음에도 총관객수는 많은 경우가 존재할 수도 있습니다")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 일곱 번째 그래프: 국가 -> 장르 선버스트 그래프
-# ---------------------------------------------------------
-st.subheader("7. 제작 국가 및 장르별 영화 편수 분포 (선버스트)")
-
-fig7 = px.sunburst(
-    df,
-    path=['nation', 'genre'],
-    title='제작 국가 및 장르별 영화 편수 비율'
-)
-
-fig7.update_traces(
-    hovertemplate='<b>국가/장르:</b> %{label}<br><b>영화 편수:</b> %{value}편'
-)
-
-st.plotly_chart(fig7, use_container_width=True)
-
-st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 한국은 드라마, 일본은 애니메이션, 미국은 다양한 장르의 관객수가 분포되어있는 것을 보았을 때 그 나라에서 어떠한 영화의 종류를 좋아하는지 알 수 있습니다")
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-# ---------------------------------------------------------
-# 여덟 번째 그래프: [모든 월 통합] 월별 국가별 1위 영화 및 관객수
-# ---------------------------------------------------------
-st.subheader("8. 모든 월별 주요 국가 1위 영화 및 관객수 비교 (통합 시각화)")
-
-# 유효한 개봉월 데이터 및 주요 국가 데이터 필터링
-target_nations = ['한국', '미국', '일본']
-df_valid = df.dropna(subset=['month']).copy()
-
-# 모든 월 x 국가 조합에서 관객수 1위 영화 추출
-monthly_top_list = []
-all_months = sorted(df_valid['month'].unique())
-
-for m in all_months:
-    df_m = df_valid[df_valid['month'] == m]
-    for nat in target_nations:
-        df_nat = df_m[df_m['nation'] == nat].sort_values(by='total_audi', ascending=False)
-        if not df_nat.empty:
-            monthly_top_list.append(df_nat.iloc[0])
-
-if monthly_top_list:
-    df_monthly_top = pd.DataFrame(monthly_top_list)
-
-    # 막대 표기용 텍스트 (영화 제목 + 관객수)
-    df_monthly_top['display_text'] = df_monthly_top.apply(
-        lambda row: f"<b>{row['movieNm']}</b><br>({row['total_audi']:,}명)", axis=1
-    )
-
-    # 그룹화된 막대그래프 (x축: 개봉 월, 색상: 제작 국가)
-    fig8 = px.bar(
-        df_monthly_top,
-        x='month',
-        y='total_audi',
-        color='nation',
-        barmode='group',
-        text='display_text',
-        hover_name='movieNm',
-        title='모든 개봉 월별 제작 국가(한국/미국/일본) 1위 영화 관객수 비교',
-        labels={
-            'month': '개봉 월',
-            'total_audi': '해당 월 관객수 (명)',
-            'nation': '제작 국가'
-        }
-    )
-
-    fig8.update_traces(
-        textposition='outside',
-        hovertemplate='<b>개봉월:</b> %{x}<br><b>국가:</b> %{fullData.name}<br><b>1위 영화:</b> %{hovertext}<br><b>관객수:</b> %{y:,}명'
-    )
-
-    max_audi = df_monthly_top['total_audi'].max()
-    fig8.update_layout(
-        xaxis_title='개봉 월 (YYYY-MM)',
-        yaxis_title='관객수 (명)',
-        yaxis=dict(range=[0, max_audi * 1.3]),
-        height=600
-    )
-
-    st.plotly_chart(fig8, use_container_width=True)
-
-st.divider()
-st.info("💡 **이 그래프로 알 수 있는 것:** 선택 클릭 없이 모든 개봉 월별로 한국, 미국, 일본에서 각각 1위를 기록한 영화와 관객수를 한눈에 시간 순서대로 비교할 수 있습니다.")
+st.info("💡 **이 그래프로 알 수 있는 것:** 시간에 따라 특정 장르의 인기와 관객 수 총합이 어떻게 변화하는지 한눈에 확인할 수 있습니다. 연도별로 특정 장르가 흥행을 주도했는지 아니면 장르 전반의 관객수가 감소/증가했는지 유기적인 변화 흐름을 파악할 수 있습니다.")
